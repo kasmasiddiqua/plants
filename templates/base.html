@@ -1,0 +1,192 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>{% block title %}PlantVision AI{% endblock %}</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="{% static 'css/app.css' %}?v=12">
+	<script>document.documentElement.dataset.theme=localStorage.getItem('plantvision-theme')||'light';</script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="{% if user.is_authenticated and request.resolver_match.url_name != 'landing' %}app-body{% endif %}">
+{% if user.is_authenticated and request.resolver_match.url_name != 'landing' %}
+	<aside class="sidebar" aria-label="Primary navigation">
+		<div class="sidebar-header">
+			<a class="logo" href="{% url 'dashboard' %}">
+				<span class="logo-mark"><i data-lucide="sprout"></i></span>
+				<span>PlantVision <b>AI</b></span>
+			</a>
+			<button class="sidebar-close" type="button" onclick="document.body.classList.remove('menu-open')" aria-label="Close navigation">
+				<i data-lucide="x"></i>
+			</button>
+		</div>
+		<div class="sidebar-divider"></div>
+		<div class="workspace-menu">
+			<p class="nav-label">WORKSPACE</p>
+			<nav class="side-nav">
+				<a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><i data-lucide="layout-dashboard"></i><span class="nav-text">Dashboard</span></a>
+				<a class="{% if request.resolver_match.url_name == 'plants' %}active{% endif %}" href="{% url 'plants' %}"><i data-lucide="leaf"></i><span class="nav-text">My Plants</span></a>
+				<a class="{% if request.resolver_match.url_name == 'plant_create' %}active{% endif %}" href="{% url 'plant_create' %}"><i data-lucide="plus-circle"></i><span class="nav-text">Add Plant</span></a>
+				<a href="{% url 'plants' %}#analysis"><i data-lucide="scan-line"></i><span class="nav-text">AI Analysis</span></a>
+				<a class="{% if request.resolver_match.url_name == 'analytics' %}active{% endif %}" href="{% url 'analytics' %}"><i data-lucide="chart-no-axes-combined"></i><span class="nav-text">Growth Analytics</span></a>
+				<a class="{% if request.resolver_match.url_name == 'predictions' %}active{% endif %}" href="{% url 'predictions' %}"><i data-lucide="sparkles"></i><span class="nav-text">Predictions</span></a>
+				<a class="{% if request.resolver_match.url_name == 'history' %}active{% endif %}" href="{% url 'history' %}"><i data-lucide="history"></i><span class="nav-text">Monitoring History</span></a>
+				<a class="{% if request.resolver_match.url_name == 'notifications' %}active{% endif %}" href="{% url 'notifications' %}"><i data-lucide="bell"></i><span class="nav-text">Notifications</span><span class="nav-dot"></span></a>
+				<a class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}" href="{% url 'settings' %}"><i data-lucide="settings-2"></i><span class="nav-text">Settings</span></a>
+			</nav>
+		</div>
+		<div class="profile-section">
+			<div class="profile-mini">
+				<span class="profile-avatar">{{ user.username|slice:':1'|upper }}</span>
+				<div class="profile-copy"><strong>{{ user.username }}</strong><small>Plant Manager</small></div>
+				<a class="profile-settings" href="{% url 'settings' %}" title="Profile settings" aria-label="Profile settings"><i data-lucide="user-cog"></i></a>
+			</div>
+			<form class="logout-form" method="post" action="{% url 'logout' %}">
+				{% csrf_token %}
+				<button class="logout-button" type="submit"><i data-lucide="log-out"></i><span>Logout</span></button>
+			</form>
+		</div>
+	</aside>
+	<div class="sidebar-overlay" onclick="document.body.classList.remove('menu-open')"></div>
+	<div class="mobile-bar">
+		<a class="logo" href="{% url 'dashboard' %}"><span class="logo-mark"><i data-lucide="sprout"></i></span><span>PlantVision <b>AI</b></span></a>
+		<button class="menu-button" type="button" onclick="document.body.classList.add('menu-open')" aria-label="Open navigation"><i data-lucide="menu"></i></button>
+	</div>
+	<div class="app-main">
+		<header class="topbar">
+			<div class="breadcrumbs">PLANTVISION AI <span>/</span> {% block page_label %}OVERVIEW{% endblock %}</div>
+			<div class="top-actions"><label class="search"><i data-lucide="search"></i><input type="search" placeholder="Search plants..."></label><button class="icon-button theme-toggle" type="button" title="Switch to dark mode" aria-label="Switch to dark mode"><i data-lucide="moon"></i></button><a class="icon-button" href="{% url 'notifications' %}" title="Notifications"><i data-lucide="bell"></i><span></span></a></div>
+		</header>
+		<aside class="ai-chat" aria-label="PlantVision AI assistant">
+			<div class="ai-chat-head"><div><span class="ai-status"></span><strong>PlantVision AI</strong><small>Growth assistant</small></div><button class="ai-chat-close" type="button" aria-label="Close AI assistant"><i data-lucide="x"></i></button></div>
+			<label class="ai-plant-context">Discussing <select class="ai-plant-select" aria-label="Choose plant for AI chat"><option value="">All my plants</option>{% for chat_plant in user.plants.all %}<option value="{{ chat_plant.id }}">{{ chat_plant.name }}{% if chat_plant.plant_type %} · {{ chat_plant.plant_type }}{% endif %}</option>{% endfor %}</select></label>
+			<div class="ai-chat-messages" aria-live="polite"><div class="ai-message assistant">Hi! I can analyze your latest plant growth and suggest the next step. What would you like to check?</div></div>
+			<div class="ai-prompts"><button type="button" data-question="Tell me everything about my plants">Plant information</button><button type="button" data-question="What is my plant useful for and how can it help people?">Uses and value</button><button type="button" data-question="Analyze my plant growth">Analyze growth</button><button type="button" data-question="Give me a care guide for my plants">Care guide</button><button type="button" data-question="Why are my leaves yellow?">Yellow leaves</button></div>
+			<form class="ai-chat-form"><input type="text" aria-label="Ask PlantVision AI" placeholder="Ask about your plants..."><button type="submit" aria-label="Send message"><i data-lucide="arrow-up"></i></button></form>
+		</aside>
+		<button class="ai-chat-launcher" type="button" aria-label="Open PlantVision AI assistant"><i data-lucide="sparkles"></i><span>Ask AI</span></button>
+{% endif %}
+{% if messages %}{% for message in messages %}<div class="notice">{{ message }}</div>{% endfor %}{% endif %}
+{% if user.is_authenticated and request.resolver_match.url_name != 'landing' %}<main>{% else %}<main class="public-main">{% endif %}
+{% block content %}{% endblock %}
+</main>
+{% if user.is_authenticated and request.resolver_match.url_name != 'landing' %}</div>{% endif %}
+<script>
+lucide.createIcons();
+const themeToggle = document.querySelector('.theme-toggle');
+function updateThemeButton() {
+	const dark = document.documentElement.dataset.theme === 'dark';
+	if (!themeToggle) return;
+	themeToggle.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+	themeToggle.setAttribute('aria-label', themeToggle.title);
+	themeToggle.innerHTML = '<i data-lucide="' + (dark ? 'sun' : 'moon') + '"></i>';
+	lucide.createIcons();
+}
+updateThemeButton();
+themeToggle?.addEventListener('click', function () {
+	const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+	document.documentElement.dataset.theme = nextTheme;
+	localStorage.setItem('plantvision-theme', nextTheme);
+	updateThemeButton();
+});
+const chat = document.querySelector('.ai-chat');
+const chatLauncher = document.querySelector('.ai-chat-launcher');
+const chatClose = document.querySelector('.ai-chat-close');
+const chatMessages = document.querySelector('.ai-chat-messages');
+const chatForm = document.querySelector('.ai-chat-form');
+const chatPlantSelect = document.querySelector('.ai-plant-select');
+function addChatMessage(text, role) {
+	const message = document.createElement('div');
+	message.className = 'ai-message ' + role;
+	message.textContent = text;
+	chatMessages.appendChild(message);
+	chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+function askAssistant(question) {
+	addChatMessage(question, 'user');
+	const pending = document.createElement('div');
+	pending.className = 'ai-message assistant is-typing';
+	pending.textContent = 'Thinking...';
+	chatMessages.appendChild(pending);
+	const plantParam = chatPlantSelect?.value ? '&plant_id=' + encodeURIComponent(chatPlantSelect.value) : '';
+	fetch('{% url "ai_suggestion" %}?question=' + encodeURIComponent(question) + plantParam, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+		.then(response => response.json())
+		.then(data => { pending.remove(); addChatMessage(data.answer, 'assistant'); })
+		.catch(() => { pending.remove(); addChatMessage('I could not reach the suggestion service. Try again in a moment.', 'assistant'); });
+}
+chatLauncher?.addEventListener('click', () => chat.classList.add('is-open'));
+chatClose?.addEventListener('click', () => chat.classList.remove('is-open'));
+document.querySelectorAll('[data-question]').forEach(button => button.addEventListener('click', () => { chat.classList.add('is-open'); askAssistant(button.dataset.question); }));
+chatForm?.addEventListener('submit', event => { event.preventDefault(); const input = chatForm.querySelector('input'); const question = input.value.trim(); if (!question) return; input.value = ''; askAssistant(question); });
+const cameraActions = document.querySelector('.camera-actions');
+const cameraStartButton = document.querySelector('.camera-start');
+const cameraTakeButton = document.querySelector('.camera-take');
+const cameraVideoElement = document.querySelector('.camera-preview');
+const cameraPhotoElement = document.querySelector('.camera-photo');
+const cameraPlaceholderElement = document.querySelector('.camera-placeholder');
+const cameraStatusElement = document.querySelector('.camera-status');
+if (cameraActions && !document.querySelector('.camera-stop')) {
+	const cameraStopButton = document.createElement('button');
+	cameraStopButton.type = 'button';
+	cameraStopButton.className = 'outline-btn camera-stop';
+	cameraStopButton.hidden = true;
+	cameraStopButton.textContent = 'Turn camera off';
+	cameraActions.appendChild(cameraStopButton);
+	cameraStartButton?.addEventListener('click', () => { cameraStopButton.hidden = false; });
+	cameraStopButton.addEventListener('click', () => {
+		if (typeof stopCamera === 'function') stopCamera();
+		cameraStopButton.hidden = true;
+		if (cameraStartButton) cameraStartButton.hidden = false;
+		if (cameraTakeButton) { cameraTakeButton.disabled = true; cameraTakeButton.hidden = false; }
+		if (cameraVideoElement) cameraVideoElement.hidden = true;
+		if (cameraPhotoElement) cameraPhotoElement.hidden = true;
+		if (cameraPlaceholderElement) cameraPlaceholderElement.hidden = false;
+		if (cameraStatusElement) cameraStatusElement.textContent = 'Camera is off. Use the camera again or choose an image below.';
+	});
+}
+const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+function addPlantDeleteForm(container, plantName, plantUrl) {
+	if (!csrfToken || !container || container.querySelector('.plant-delete-form')) return;
+	const form = document.createElement('form');
+	form.className = 'plant-delete-form';
+	form.method = 'post';
+	form.action = plantUrl.replace(/\/$/, '/delete/');
+	form.onsubmit = () => window.confirm('Delete ' + plantName + ' and all its observations?');
+	form.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="' + csrfToken + '"><button class="plant-delete" type="submit" aria-label="Delete ' + plantName + '" title="Delete ' + plantName + '"><i data-lucide="trash-2"></i></button>';
+	container.appendChild(form);
+}
+document.querySelectorAll('.plant-card-premium .plant-info').forEach(card => {
+	const link = card.querySelector('a.round-arrow');
+	if (link) addPlantDeleteForm(card, card.querySelector('h3')?.textContent.trim() || 'plant', link.href);
+});
+const detailLink = document.querySelector('.page-head a[href*="/plants/"]:not(.back)');
+const detailActions = document.querySelector('.page-head');
+const detailTitle = document.querySelector('.page-head h1');
+if (detailLink && detailActions && detailTitle) addPlantDeleteForm(detailActions, detailTitle.textContent.trim(), detailLink.href);
+lucide.createIcons();
+document.querySelectorAll('input[type="password"]').forEach(function (input) {
+	const wrapper = document.createElement('span');
+	wrapper.className = 'password-field';
+	input.parentNode.insertBefore(wrapper, input);
+	wrapper.appendChild(input);
+	const toggle = document.createElement('button');
+	toggle.type = 'button';
+	toggle.className = 'password-toggle';
+	toggle.setAttribute('aria-label', 'Show password');
+	toggle.innerHTML = '<i data-lucide="eye"></i>';
+	toggle.addEventListener('click', function () {
+		const visible = input.type === 'text';
+		input.type = visible ? 'password' : 'text';
+		toggle.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+		toggle.textContent = visible ? 'Show' : 'Hide';
+	});
+	wrapper.appendChild(toggle);
+});
+</script>
+</body>
+</html>

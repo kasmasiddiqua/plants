@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Settings | PlantVision AI{% endblock %}
+{% block page_label %}SETTINGS{% endblock %}
+{% block content %}
+<div class="workspace-head"><div><span class="kicker">YOUR WORKSPACE</span><h1>Settings</h1><p>Control your account and monitoring preferences.</p></div></div>
+<section class="settings-grid">
+	<article class="panel settings-card">
+		<div class="settings-heading"><span class="notification-icon green"><i data-lucide="user-round"></i></span><div><h2>Account</h2><p>Manage your profile details.</p></div></div>
+		<form method="post" class="settings-form">
+			{% csrf_token %}
+			{{ account_form.non_field_errors }}
+			<label for="{{ account_form.username.id_for_label }}">Display name{{ account_form.username }}</label>
+			{{ account_form.username.errors }}
+			<label for="{{ account_form.email.id_for_label }}">Email address{{ account_form.email }}</label>
+			{{ account_form.email.errors }}
+			<button class="primary-btn" type="submit"><i data-lucide="save"></i>Save changes</button>
+		</form>
+	</article>
+	<article class="panel settings-card">
+		<div class="settings-heading"><span class="notification-icon violet"><i data-lucide="lock-keyhole"></i></span><div><h2>Password</h2><p>Your current password is never displayed. Change it securely here.</p></div></div>
+		<form method="post" class="settings-form">
+			{% csrf_token %}<input type="hidden" name="form_name" value="password">
+			{{ password_form.non_field_errors }}
+			{% for field in password_form %}<label for="{{ field.id_for_label }}">{{ field.label }}{{ field }}</label>{{ field.errors }}{% endfor %}
+			<button class="primary-btn" type="submit"><i data-lucide="key-round"></i>Update password</button>
+		</form>
+	</article>
+	<article class="panel settings-card"><div class="settings-heading"><span class="notification-icon amber"><i data-lucide="bell"></i></span><div><h2>Notifications</h2><p>Choose the signals you receive.</p></div></div><label class="toggle-row">Email notifications <input type="checkbox" checked><span class="toggle"></span></label><label class="toggle-row">Growth alerts <input type="checkbox" checked><span class="toggle"></span></label><label class="toggle-row">Monitoring reminders <input type="checkbox" checked><span class="toggle"></span></label></article>
+</section>
+{% endblock %}

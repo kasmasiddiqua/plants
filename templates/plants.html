@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}My Plants | PlantVision AI{% endblock %}
+{% block page_label %}MY PLANTS{% endblock %}
+{% block content %}
+<div class="workspace-head">
+  <div><span class="kicker">YOUR COLLECTION</span><h1>My plants</h1><p>Manage and monitor every growing story in one place.</p></div>
+  <a class="primary-btn" href="{% url 'plant_create' %}"><i data-lucide="plus"></i>Add plant</a>
+</div>
+<div class="toolbar">
+  <label class="search search-wide"><i data-lucide="search"></i><input placeholder="Search your plants..." aria-label="Search your plants"></label>
+  <div class="filter-control"><button class="filter-btn" type="button" aria-expanded="false"><i data-lucide="sliders-horizontal"></i> Filter</button><div class="filter-menu" role="menu"><button type="button" data-filter="all">All plants</button><button type="button" data-filter="good">Good growth</button><button type="button" data-filter="healthy">Healthy growth</button><button type="button" data-filter="normal">Normal growth</button><button type="button" data-filter="slow">Slow growth</button><button type="button" data-filter="unmonitored">Not monitored</button></div></div>
+  <button class="filter-btn" type="button"><i data-lucide="arrow-down-up"></i> Sort</button>
+</div>
+<div class="plant-grid-premium plants-page-grid">
+{% for plant in plants %}{% with row=plant.latest_observation %}
+  <article class="plant-card-premium plant-filter-card" data-name="{{ plant.name|lower }}" data-type="{{ plant.plant_type|lower }}" data-growth-status="{% if row %}{{ row.growth_status }}{% else %}unmonitored{% endif %}">
+    <div class="plant-photo photo-a"><span class="status-pill success"><i></i>{% if row %}{{ row.get_growth_status_display }} growth{% else %}Not monitored{% endif %}</span>{% if row %}<img src="{{ row.image.url }}" alt="{{ plant.name }} plant">{% else %}<i data-lucide="sprout"></i>{% endif %}</div>
+    <div class="plant-info"><div><h3>{{ plant.name }}</h3><span>{{ plant.plant_type }} · {{ plant.planting_date|timesince }} old</span></div><a href="{% url 'plant_detail' plant.id %}" class="round-arrow" aria-label="View {{ plant.name }}"><i data-lucide="arrow-up-right"></i></a><div class="plant-metrics"><span>Height <b>{% if row %}{{ row.estimated_height_cm }} cm{% else %}--{% endif %}</b></span><span>Leaves <b>{% if row %}{{ row.leaf_count }}{% else %}--{% endif %}</b></span><span>Growth <b class="positive">{% if row %}+{{ row.growth_percent }}%{% else %}--{% endif %}</b></span></div></div>
+  </article>
+{% endwith %}{% empty %}<div class="empty-premium"><i data-lucide="leaf"></i><h3>No plants yet</h3><p>Start your collection with a first plant.</p><a class="primary-btn" href="{% url 'plant_create' %}">Add a plant</a></div>{% endfor %}
+</div>
+<section id="analysis" class="panel disease-scanner">
+  <div><span class="kicker">AI ANALYSIS</span><h2>Check a leaf for disease signs</h2><p>Upload a clear leaf photo for a quick visual screen. This looks for color patterns that may need attention; it is not a confirmed diagnosis.</p></div>
+  <form id="disease-scan-form" class="disease-scan-form" enctype="multipart/form-data"><label for="disease-image">Plant image</label><input id="disease-image" name="image" type="file" accept="image/*" required><button class="primary-btn" type="submit"><i data-lucide="scan-search"></i>Scan for disease</button></form>
+  <div id="disease-result" class="disease-result" role="status" aria-live="polite" hidden></div>
+</section>
+<script>
+const diseaseForm=document.querySelector('#disease-scan-form');
+const diseaseResult=document.querySelector('#disease-result');
+diseaseForm?.addEventListener('submit',event=>{event.preventDefault();const button=diseaseForm.querySelector('button');button.disabled=true;button.textContent='Scanning...';diseaseResult.hidden=false;diseaseResult.className='disease-result is-loading';diseaseResult.textContent='Reviewing visible leaf patterns...';fetch('{% url "disease_scan" %}',{method:'POST',body:new FormData(diseaseForm),headers:{'X-CSRFToken':'{{ csrf_token }}','X-Requested-With':'XMLHttpRequest'}}).then(response=>response.json().then(data=>({ok:response.ok,data}))).then(({ok,data})=>{if(!ok)throw new Error(data.error||'The scan could not be completed.');diseaseResult.className='disease-result severity-'+data.severity;diseaseResult.innerHTML='<div><span class="kicker">SCREENING RESULT</span><h3>'+data.label+'</h3><p>'+data.symptoms+'</p><p><strong>Suggested next step:</strong> '+data.guidance+'</p></div><b>'+data.confidence+'%<small>visual confidence</small></b>'}).catch(error=>{diseaseResult.className='disease-result severity-unknown';diseaseResult.textContent=error.message}).finally(()=>{button.disabled=false;button.innerHTML='<i data-lucide="scan-search"></i>Scan for disease';lucide.createIcons()})});
+const filterControl=document.querySelector('.filter-control');const filterButton=filterControl?.querySelector('.filter-btn');const filterMenu=filterControl?.querySelector('.filter-menu');const searchPlants=document.querySelector('.search-wide input');const plantCards=[...document.querySelectorAll('.plant-filter-card')];let activeFilter='all';function applyPlantFilters(){const query=(searchPlants?.value||'').toLowerCase().trim();plantCards.forEach(card=>{const matchesFilter=activeFilter==='all'||card.dataset.growthStatus===activeFilter;const matchesSearch=!query||card.dataset.name.includes(query)||card.dataset.type.includes(query);card.hidden=!(matchesFilter&&matchesSearch);});}filterButton?.addEventListener('click',()=>{const open=filterMenu.classList.toggle('is-open');filterButton.setAttribute('aria-expanded',open);});filterMenu?.querySelectorAll('[data-filter]').forEach(option=>option.addEventListener('click',()=>{activeFilter=option.dataset.filter;filterMenu.classList.remove('is-open');filterButton.setAttribute('aria-expanded','false');filterButton.lastChild.textContent=' '+option.textContent;applyPlantFilters();}));searchPlants?.addEventListener('input',applyPlantFilters);document.addEventListener('click',event=>{if(filterControl&&!filterControl.contains(event.target)){filterMenu?.classList.remove('is-open');filterButton?.setAttribute('aria-expanded','false');}});
+</script>
+{% endblock %}

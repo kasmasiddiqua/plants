@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<section class="form-page"><p class="eyebrow">NEW SUBJECT</p><h1>{{ title }}</h1><p class="muted">Give the plant a name so its visual timeline has a home.</p><form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Save plant</button></form></section>{% endblock %}
